@@ -16,6 +16,8 @@ public static class StringExtensions
             return sb.ToString();
         }
 
-        public string ToFieldName() => value[0].ToString().ToLowerInvariant() + value.Substring(1);
+        public string ToFieldName() => "_" + value[0].ToString().ToLowerInvariant() + value.Substring(1);
+        
+        public string ToVariableName() => value[0].ToString().ToLowerInvariant() + value.Substring(1);
     }
 }

@@ -20,16 +20,16 @@ public interface IGenerationBlock
 
 public struct LineGenerationNode(string line = "", bool newline = true) : IGenerationNode
 {
-    private string _line = line;
-
+    public static readonly LineGenerationNode EmptyInstance = new("");
+    
     public bool Newline { get; set; } = newline;
 
     public StringBuilder Generate(StringBuilder stringBuilder, int indent = 0)
     {
         if (Newline)
-            stringBuilder.AppendLine(GenerationNode.Indent.Repeat(indent) + _line);
+            stringBuilder.AppendLine(GenerationNode.Indent.Repeat(indent) + line);
         else
-            stringBuilder.Append(GenerationNode.Indent.Repeat(indent) + _line);
+            stringBuilder.Append(GenerationNode.Indent.Repeat(indent) + line);
         
         return stringBuilder;
     }
@@ -57,10 +57,7 @@ public struct BlockGenerationNode(string header = "", bool expanded = true) : IG
         else
             stringBuilder.Append(GenerationNode.Indent.Repeat(indent) + Header + " { ");
 
-        foreach (var generationNode in _children)
-        {
-            generationNode.Generate(stringBuilder, ExpandBlock ? indent + 1 : 0);
-        }
+        GenerationNode.GenerateChildren(_children, stringBuilder, ExpandBlock ? indent + 1 : 0);
         
         if (ExpandBlock)
             stringBuilder.AppendLine(GenerationNode.Indent.Repeat(indent) + "}");
@@ -71,18 +68,11 @@ public struct BlockGenerationNode(string header = "", bool expanded = true) : IG
     }
 }
 
-public readonly struct SpanGenerationNode(IGenerationBlock block) : IGenerationNode
+public readonly struct SpanGenerationNode : IGenerationNode
 {
-    private readonly int _index = block.Children.Count;
-    
-    public StringBuilder Generate(StringBuilder stringBuilder, int indent = 0)
-    {
-        if (_index == block.Children.Count - 1) return stringBuilder;
-        if (_index == 0) return stringBuilder;
-        if (block.Children[_index + 1] is SpanGenerationNode) return stringBuilder;
+    public static readonly SpanGenerationNode Instance = default;
 
-        return stringBuilder.AppendLine();
-    }
+    public StringBuilder Generate(StringBuilder stringBuilder, int indent = 0) => stringBuilder;
 }
 
 public readonly struct UsingLineGenerationNode(string @using) : IGenerationNode, IComparable<UsingLineGenerationNode>
@@ -132,8 +122,7 @@ public struct FileGenerationNode() : IGenerationNode, IGenerationBlock
                 ? $" {_targetNamespace}" : string.Empty);
             stringBuilder.AppendLine("{");
             
-            foreach (var generationNode in _childrenNodes)
-                generationNode.Generate(stringBuilder, indent + 1);
+            GenerationNode.GenerateChildren(_childrenNodes, stringBuilder, indent + 1);
             
             stringBuilder.AppendLine("}");
         }
@@ -143,8 +132,7 @@ public struct FileGenerationNode() : IGenerationNode, IGenerationBlock
                 stringBuilder.AppendLine($"namespace {_targetNamespace};");
             stringBuilder.AppendLine();
             
-            foreach (var generationNode in _childrenNodes)
-                generationNode.Generate(stringBuilder, indent);
+            GenerationNode.GenerateChildren(_childrenNodes, stringBuilder, indent);
         }
         
         return stringBuilder;
@@ -217,6 +205,24 @@ public struct FileGenerationNode() : IGenerationNode, IGenerationBlock
 
 public static partial class GenerationNode
 {
+    public static void GenerateChildren(IList<IGenerationNode> children, StringBuilder stringBuilder, int indent)
+    {
+        for (var i = 0; i < children.Count; i++)
+        {
+            var node = children[i];
+            if (node is SpanGenerationNode)
+            {
+                bool isLastOfSpanRun = i == children.Count - 1 || children[i + 1] is not SpanGenerationNode;
+                if (isLastOfSpanRun && i > 0 && i < children.Count - 1)
+                    stringBuilder.AppendLine();
+
+                continue;
+            }
+
+            node.Generate(stringBuilder, indent);
+        }
+    }
+    
     public static BlockGenerationNode ClassNode(string identifier, params string[] keywords)
     {
         string[] sortedKeywords = [.. ClassKeywords.Where(keywords.Contains)];
@@ -293,7 +299,9 @@ public static partial class GenerationNode
 
     public static BlockGenerationNode FixedBlockNode(string expression) => BlockNode($"fixed ({expression})");
 
-    public static LineGenerationNode EmptyLineNode() => new("", true);
+    public static LineGenerationNode EmptyLineNode() => LineGenerationNode.EmptyInstance;
+
+    public static SpanGenerationNode SpanLineNode() => SpanGenerationNode.Instance;
     
     public static LineGenerationNode LineNode(string line, bool newline = true) => new(line, newline);
     
@@ -306,6 +314,12 @@ public static partial class GenerationNode
         if (node == null) return block;
         
         block.Children.Add(node);
+        return block;
+    }
+    
+    public static TNode AddLine<TNode>(this TNode block, string line) where TNode : IGenerationBlock
+    {
+        block.Children.Add(LineNode(line));
         return block;
     }
 
@@ -341,6 +355,14 @@ public static partial class GenerationNode
         return block;
     }
     
+    public static TNode AddLines<TNode>(this TNode block, IEnumerable<string> lines) where TNode : IGenerationBlock
+    {
+        foreach (var line in lines)
+            block.Children.Add(LineNode(line));
+        
+        return block;
+    }
+    
     public static TNode AddEmptyLine<TNode>(this TNode block) where TNode : IGenerationBlock
     {
         block.Children.Add(EmptyLineNode());
@@ -349,7 +371,7 @@ public static partial class GenerationNode
 
     public static TNode AddSpanLine<TNode>(this TNode block) where TNode : IGenerationBlock
     {
-        block.Children.Add(new SpanGenerationNode(block));
+        block.Children.Add(SpanLineNode());
         return block;
     }
 
