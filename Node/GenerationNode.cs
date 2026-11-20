@@ -51,11 +51,18 @@ public struct BlockGenerationNode(string header = "", bool expanded = true) : IG
     {
         if (ExpandBlock)
         {
-            stringBuilder.AppendLine(GenerationNode.Indent.Repeat(indent) + Header);
+            if (!string.IsNullOrEmpty(Header))
+                stringBuilder.AppendLine(GenerationNode.Indent.Repeat(indent) + Header);
+            
             stringBuilder.AppendLine(GenerationNode.Indent.Repeat(indent) + "{");
         }
         else
-            stringBuilder.Append(GenerationNode.Indent.Repeat(indent) + Header + " { ");
+        {
+            if (!string.IsNullOrEmpty(Header))
+                stringBuilder.Append(GenerationNode.Indent.Repeat(indent) + Header + " { ");
+            else
+                stringBuilder.Append(GenerationNode.Indent.Repeat(indent) + "{ ");
+        }
 
         GenerationNode.GenerateChildren(_children, stringBuilder, ExpandBlock ? indent + 1 : 0);
         
