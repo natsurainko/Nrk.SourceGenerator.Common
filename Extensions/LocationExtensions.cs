@@ -2,19 +2,22 @@
 using System.Xml;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
+using Nrk.SourceGenerator.Common.Helpers;
 
 namespace Nrk.SourceGenerator.Common.Extensions;
 
 public static class LocationExtensions
 {
-    public static Location CreateLocation(string path, SourceText sourceText, XmlException exception) 
-        => CreateLocation(path, sourceText, exception.LineNumber, exception.LinePosition);
+    public static Location CreateLocation(XmlSourceText sourceText, XmlException exception) 
+        => CreateLocation(sourceText.Path, sourceText.Source, exception.LineNumber, exception.LinePosition);
 
-    public static Location CreateLocation(string path, SourceText sourceText, IXmlLineInfo info)
+    public static Location CreateLocation(XmlSourceText sourceText, IXmlLineInfo? info)
     {
-        return info.HasLineInfo()
-            ? CreateLocation(path, sourceText, info.LineNumber, info.LinePosition)
-            : CreateLocation(path, sourceText, 0, 0);
+        IXmlLineInfo lineInfo = info ?? sourceText.Document;
+        
+        return lineInfo.HasLineInfo()
+            ? CreateLocation(sourceText.Path, sourceText.Source, lineInfo.LineNumber, lineInfo.LinePosition)
+            : CreateLocation(sourceText.Path, sourceText.Source, 0, 0);
     }
     
     private static Location CreateLocation(string path, SourceText sourceText, int lineNumber, int linePosition)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Nrk.SourceGenerator.Common.Node;
 using static Nrk.SourceGenerator.Common.Node.GenerationNode;
 
@@ -21,6 +22,26 @@ public static class SymbolExtensions
             return symbol.TypeKind != TypeKind.Interface &&
                    symbol.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, interfaceType));
         }
+
+        public bool IsPartial()
+        {
+            foreach (var reference in symbol.DeclaringSyntaxReferences)
+            {
+                if (reference.GetSyntax() is TypeDeclarationSyntax tds
+                    && tds.Modifiers.Any(SyntaxKind.PartialKeyword))
+                    return true;
+            }
+
+            return false;
+        }
+
+        public bool HasAttribute(INamedTypeSymbol attributeType) =>
+            symbol.GetAttributes()
+                .Any(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, attributeType));
+
+        public bool HasAttribute(string attributeMetadataName) =>
+            symbol.GetAttributes()
+                .Any(a => a.AttributeClass?.ToDisplayString() == attributeMetadataName);
 
         public FileGenerationNode GenPartialClassFile(Func<BlockGenerationNode, BlockGenerationNode> func)
         {

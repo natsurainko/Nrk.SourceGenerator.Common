@@ -3,6 +3,7 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)**/*.cs"
              Exclude="$(MSBuildThisFileDirectory)obj/**/*.cs;$(MSBuildThisFileDirectory)bin/**/*.cs"
-             Link="SourceGeneration/%(RecursiveDir)%(Filename)%(Extension)" />
+             Link="SourceGeneration/%(RecursiveDir)%(Filename)%(Extension)"
+             Visible="false" />
   </ItemGroup>
 </Project>

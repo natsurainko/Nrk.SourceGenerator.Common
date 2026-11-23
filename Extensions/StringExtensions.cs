@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 
 namespace Nrk.SourceGenerator.Common.Extensions;
 
@@ -6,6 +7,17 @@ public static class StringExtensions
 {
     extension(string value)
     {
+        public string TrimGlobalPrefix()
+        {
+            const string globalPrefix = "global::";
+
+            return value.StartsWith(globalPrefix, StringComparison.Ordinal)
+                ? value.Substring(globalPrefix.Length)
+                : value;
+        }
+
+        public string GetQualifiedTypeName() => "global::" + value.Trim().TrimGlobalPrefix();
+
         public string Repeat(int count)
         {
             StringBuilder sb = new(value.Length * count);
