@@ -22,6 +22,18 @@ public static class SymbolExtensions
             return symbol.TypeKind != TypeKind.Interface &&
                    symbol.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, interfaceType));
         }
+        
+        public bool IsPublicImplicitImplementation(IMethodSymbol? interfaceMethod)
+        {
+            if (interfaceMethod is null) return false;
+
+            return symbol.FindImplementationForInterfaceMember(interfaceMethod) is IMethodSymbol
+            {
+                MethodKind: MethodKind.Ordinary,
+                DeclaredAccessibility: Accessibility.Public,
+                IsStatic: false
+            };
+        }
 
         public bool IsPartial()
         {
